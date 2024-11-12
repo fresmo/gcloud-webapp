@@ -1,0 +1,5 @@
+project_id = "recruiting-marco-f"
+environment = "dev"
+region = "europe-west3"
+k8s_cluster_name = "marco-f-cluster"
+k8s_node_machine_type = "e2-medium"

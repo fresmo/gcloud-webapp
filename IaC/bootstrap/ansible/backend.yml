@@ -1,0 +1,58 @@
+---
+- name: Create a GCS Bucket with folder
+  hosts: localhost
+  gather_facts: no
+  vars:
+    project_id: "{{ lookup('env', 'GCP_PROJECT_ID') }}"
+    bucket_name: "marco-f"
+    storage_class: "STANDARD"
+    location: "europe-west3"
+    folder_name: "terraform-states"
+
+  tasks:
+    - name: Check if bucket exists
+      command: "gcloud storage buckets list --project={{ project_id }} --filter='name=gs://{{ bucket_name }}'"
+      register: bucket_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create GCS bucket using gcloud command
+      command: >
+        gcloud storage buckets create gs://{{ bucket_name }}
+        --project={{ project_id }}
+        --default-storage-class={{ storage_class }}
+        --location={{ location }}
+        --uniform-bucket-level-access
+        --enable-hierarchical-namespace
+      when: bucket_check.stdout == ""
+      register: bucket_creation
+      failed_when:
+        - bucket_creation.rc != 0
+        - '"you already own it" not in bucket_creation.stderr'
+      changed_when:
+        - bucket_creation.rc == 0 or "you already own it" in bucket_creation.stderr
+
+    - name: Check if folder exists
+      command: "gcloud storage ls gs://{{ bucket_name }}/{{ folder_name }} --project={{ project_id }}"
+      register: folder_check
+      changed_when: false
+      failed_when: false
+
+    - name: Create folder in bucket
+      command: >
+        gcloud storage folders create --recursive 
+        gs://{{ bucket_name }}/{{ folder_name }}
+        --project={{ project_id }}
+      when: folder_check.rc != 0
+      register: folder_creation
+      failed_when:
+        - folder_creation.rc != 0
+        - '"already exists" not in folder_creation.stderr'
+      changed_when:
+        - folder_creation.rc == 0 or "already exists" not in folder_creation.stderr
+
+    - name: Show bucket and folder creation status
+      debug:
+        msg: 
+          - "Bucket creation status: {{ 'Created' if bucket_creation.changed else 'Already exists' }}"
+          - "Folder creation status: {{ 'Created' if folder_creation.changed else 'Already exists' }}"
