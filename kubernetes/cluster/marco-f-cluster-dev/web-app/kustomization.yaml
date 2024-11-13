@@ -6,3 +6,4 @@ resources:
   - ./deployment.yml
   - ./service.yaml
   - ./hpa.yaml
+  - ./ingress.yaml
